@@ -37,7 +37,11 @@ func main() {
 		logger.Panic("can't load database")
 	}
 
-	th := thera.NewThera(db, cfg)
+	th, err := thera.NewThera(db, cfg)
+	if err != nil {
+		logger.Panic(err)
+	}
+
 	bot := thera.NewBot(db)
 
 	pref := tele.Settings{

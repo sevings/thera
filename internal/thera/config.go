@@ -3,6 +3,7 @@ package thera
 import (
 	"errors"
 	"os"
+	"thera/internal/letta"
 
 	"github.com/knadh/koanf/parsers/toml"
 	"github.com/knadh/koanf/providers/file"
@@ -13,6 +14,7 @@ type Config struct {
 	TgToken string `koanf:"tg_token"`
 	DBPath  string `koanf:"db_path"`
 	Release bool
+	Letta   letta.Config
 }
 
 func LoadConfig() (Config, error) {
