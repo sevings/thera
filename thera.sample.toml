@@ -1,0 +1,3 @@
+tg_token = "your_telegram_bot_token"
+db_path = "../thera.sqlite"
+release = false
