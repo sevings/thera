@@ -6,6 +6,16 @@ import (
 	"net/http"
 )
 
+type AgentType string
+
+const (
+	AgentTypeMemgpt         AgentType = "memgpt_agent"
+	AgentTypeSplitThread    AgentType = "split_thread_agent"
+	AgentTypeSleeptime      AgentType = "sleeptime_agent"
+	AgentTypeVoiceConvo     AgentType = "voice_convo_agent"
+	AgentTypeVoiceSleeptime AgentType = "voice_sleeptime_agent"
+)
+
 // CreateAgentRequest represents the request payload for creating an agent
 type CreateAgentRequest struct {
 	Name                   string           `json:"name,omitempty"`
@@ -17,7 +27,7 @@ type CreateAgentRequest struct {
 	ToolRules              []any            `json:"tool_rules,omitempty"`
 	Tags                   []string         `json:"tags,omitempty"`
 	System                 string           `json:"system,omitempty"`
-	AgentType              string           `json:"agent_type,omitempty"`
+	AgentType              AgentType        `json:"agent_type,omitempty"`
 	LLMConfig              *LLMConfig       `json:"llm_config,omitempty"`
 	EmbeddingConfig        *EmbeddingConfig `json:"embedding_config,omitempty"`
 	InitialMessageSequence []InitialMessage `json:"initial_message_sequence,omitempty"`
@@ -25,6 +35,11 @@ type CreateAgentRequest struct {
 	Metadata               map[string]any   `json:"metadata,omitempty"`
 	ProjectID              string           `json:"project_id,omitempty"`
 	IdentityIDs            []string         `json:"identity_ids,omitempty"`
+}
+
+type AgentMemory struct {
+	Block          []MemoryBlock
+	PromptTemplate string `json:"prompt_template"`
 }
 
 // MemoryBlock represents a block in the agent's memory
@@ -40,25 +55,26 @@ type MemoryBlock struct {
 
 // LLMConfig represents the LLM configuration for an agent
 type LLMConfig struct {
-	Model              string  `json:"model"`
-	ModelEndpointType  string  `json:"model_endpoint_type"`
-	ContextWindow      int     `json:"context_window"`
-	ModelEndpoint      string  `json:"model_endpoint,omitempty"`
-	ProviderName       string  `json:"provider_name,omitempty"`
-	ModelWrapper       string  `json:"model_wrapper,omitempty"`
-	Temperature        float64 `json:"temperature,omitempty"`
-	MaxTokens          int     `json:"max_tokens,omitempty"`
-	EnableReasoner     bool    `json:"enable_reasoner,omitempty"`
-	MaxReasoningTokens int     `json:"max_reasoning_tokens,omitempty"`
+	Model              string  `json:"model" koanf:"model"`
+	ModelEndpointType  string  `json:"model_endpoint_type" koanf:"model_endpoint_type"`
+	ContextWindow      int     `json:"context_window" koanf:"context_window"`
+	ModelEndpoint      string  `json:"model_endpoint,omitempty" koanf:"model_endpoint"`
+	ProviderName       string  `json:"provider_name,omitempty" koanf:"provider_name"`
+	ModelWrapper       string  `json:"model_wrapper,omitempty" koanf:"model_wrapper"`
+	Handle             string  `json:"handle,omitempty" koanf:"handle"`
+	Temperature        float64 `json:"temperature,omitempty" koanf:"temperature"`
+	MaxTokens          int     `json:"max_tokens,omitempty" koanf:"max_tokens"`
+	EnableReasoner     bool    `json:"enable_reasoner,omitempty" koanf:"enable_reasoner"`
+	MaxReasoningTokens int     `json:"max_reasoning_tokens,omitempty" koanf:"max_reasoning_tokens"`
 }
 
 // EmbeddingConfig represents the embedding configuration for an agent
 type EmbeddingConfig struct {
-	EmbeddingEndpointType string `json:"embedding_endpoint_type"`
-	EmbeddingModel        string `json:"embedding_model"`
-	EmbeddingDim          int    `json:"embedding_dim"`
-	EmbeddingEndpoint     string `json:"embedding_endpoint,omitempty"`
-	EmbeddingChunkSize    int    `json:"embedding_chunk_size,omitempty"`
+	EmbeddingEndpointType string `json:"embedding_endpoint_type" koanf:"embedding_endpoint_type"`
+	EmbeddingModel        string `json:"embedding_model" koanf:"embedding_model"`
+	EmbeddingDim          int    `json:"embedding_dim" koanf:"embedding_dim"`
+	EmbeddingEndpoint     string `json:"embedding_endpoint,omitempty" koanf:"embedding_endpoint"`
+	EmbeddingChunkSize    int    `json:"embedding_chunk_size,omitempty" koanf:"embedding_chunk_size"`
 }
 
 // InitialMessage represents an initial message in the agent's memory
@@ -73,10 +89,10 @@ type Agent struct {
 	ID              string           `json:"id"`
 	Name            string           `json:"name"`
 	System          string           `json:"system"`
-	AgentType       string           `json:"agent_type"`
+	AgentType       AgentType        `json:"agent_type"`
 	LLMConfig       *LLMConfig       `json:"llm_config"`
 	EmbeddingConfig *EmbeddingConfig `json:"embedding_config"`
-	MemoryBlocks    []MemoryBlock    `json:"memory"`
+	Memory          AgentMemory      `json:"memory"`
 	Tools           []Tool           `json:"tools"`
 	Sources         []Source         `json:"sources"`
 	Tags            []string         `json:"tags"`

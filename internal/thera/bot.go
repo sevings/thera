@@ -1,6 +1,7 @@
 package thera
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -46,6 +47,8 @@ func (bot *Bot) Start(cfg Config, api BotAPI, thera *Thera) {
 
 	bot.api.Use(middleware.Recover())
 	bot.api.Use(bot.logMessage)
+
+	bot.api.Handle(tele.OnText, bot.handleText)
 
 	go func() {
 		bot.log.Info("starting bot")
@@ -118,4 +121,39 @@ func (bot *Bot) LogError(err error, c tele.Context) {
 			"size", len(c.Text()),
 			"err", err)
 	}
+}
+
+func (bot *Bot) handleText(c tele.Context) error {
+	ctx := context.Background()
+	messages, err := bot.thera.SendMessage(ctx, c.Sender().ID, c.Text())
+	if err != nil {
+		bot.LogError(err, c)
+		return c.Send("Sorry, I encountered an error processing your message.")
+	}
+
+	for _, msg := range messages {
+		responseText := ""
+
+		switch m := msg; m["message_type"] {
+		case "assistant_message":
+			if content, ok := m["content"].(string); ok {
+				responseText = content
+			}
+		case "reasoning_message":
+			if reasoning, ok := m["reasoning"].(string); ok {
+				responseText = fmt.Sprintf("<i>%s</i>", reasoning)
+			}
+		default:
+			responseText = fmt.Sprintf("Received message: %v", m)
+		}
+
+		if responseText != "" {
+			if err := c.Send(responseText, tele.ModeHTML); err != nil {
+				bot.LogError(err, c)
+				return err
+			}
+		}
+	}
+
+	return nil
 }

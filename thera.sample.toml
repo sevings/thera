@@ -6,3 +6,19 @@ release = false
 base_url = "http://127.0.0.1:8283"
 token = ""
 timeout = 10
+
+[model]
+model = "llama-3.3-70b-versatile"
+model_endpoint_type = "groq"
+context_window = 8192
+handle = "groq/llama-3.3-70b-versatile"
+model_endpoint = "https://api.groq.com/openai/v1"
+
+[embedding]
+embedding_endpoint_type = "hugging-face"
+embedding_model = "letta-free"
+embedding_dim = 1024
+
+[agent]
+type = "memgpt_agent"
+system = "You are a helpful AI assistant designed to provide supportive and engaging conversation."
