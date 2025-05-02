@@ -2,7 +2,9 @@ package thera
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"os"
 	"thera/internal/letta"
 
 	"go.uber.org/zap"
@@ -55,6 +57,7 @@ func (th *Thera) getChatForUser(ctx context.Context, userID int64) (*Chat, error
 		return nil, fmt.Errorf("error checking existing chat: %w", err)
 	}
 
+	// Create user identity
 	identityReq := letta.CreateIdentityRequest{
 		IdentifierKey: fmt.Sprintf("user_%d", userID),
 		Name:          fmt.Sprintf("User %d", userID),
@@ -66,20 +69,31 @@ func (th *Thera) getChatForUser(ctx context.Context, userID int64) (*Chat, error
 		return nil, fmt.Errorf("failed to create identity: %w", err)
 	}
 
-	agentReq := letta.CreateAgentRequest{
-		Name:            fmt.Sprintf("Agent for User %d", userID),
-		System:          th.cfg.Agent.System,
-		AgentType:       letta.AgentTypeMemgpt,
-		IdentityIDs:     []string{identity.ID},
-		LLMConfig:       &th.cfg.Model,
-		EmbeddingConfig: &th.cfg.Embedding,
+	// Load agent configuration from file
+	var agentConfig letta.CreateAgentRequest
+	if th.cfg.AgentPath != "" {
+		configData, err := os.ReadFile(th.cfg.AgentPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read agent config: %w", err)
+		}
+
+		err = json.Unmarshal(configData, &agentConfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse agent config: %w", err)
+		}
 	}
 
-	agent, err := th.api.CreateAgent(ctx, agentReq)
+	// Override or set specific fields
+	agentConfig.Name = fmt.Sprintf("Agent for User %d", userID)
+	agentConfig.IdentityIDs = []string{identity.ID}
+
+	// Create agent
+	agent, err := th.api.CreateAgent(ctx, agentConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create agent: %w", err)
 	}
 
+	// Create chat in database
 	chat, err = th.db.CreateChat(userID, identity.ID, agent.ID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to save chat: %w", err)

@@ -11,17 +11,11 @@ import (
 )
 
 type Config struct {
-	TgToken   string `koanf:"tg_token"`
+	AgentPath string `koanf:"agent_path"`
 	DBPath    string `koanf:"db_path"`
+	TgToken   string `koanf:"tg_token"`
 	Release   bool
 	Letta     letta.Config
-	Model     letta.LLMConfig
-	Embedding letta.EmbeddingConfig
-	Agent     AgentConfig
-}
-
-type AgentConfig struct {
-	System string
 }
 
 func LoadConfig() (Config, error) {
