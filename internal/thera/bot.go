@@ -123,9 +123,35 @@ func (bot *Bot) LogError(err error, c tele.Context) {
 	}
 }
 
+func (bot *Bot) sendMessage(c tele.Context) ([]map[string]any, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go func() {
+		ticker := time.NewTicker(3 * time.Second)
+		defer ticker.Stop()
+
+		if err := c.Notify(tele.Typing); err != nil {
+			bot.log.Warn("Failed to send initial typing notification", "error", err)
+		}
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				if err := c.Notify(tele.Typing); err != nil {
+					bot.log.Warn("Failed to send typing notification", "error", err)
+				}
+			}
+		}
+	}()
+
+	return bot.thera.SendMessage(ctx, c.Sender().ID, c.Text())
+}
+
 func (bot *Bot) handleText(c tele.Context) error {
-	ctx := context.Background()
-	messages, err := bot.thera.SendMessage(ctx, c.Sender().ID, c.Text())
+	messages, err := bot.sendMessage(c)
 	if err != nil {
 		bot.LogError(err, c)
 		return c.Send("Sorry, I encountered an error processing your message.")
@@ -141,14 +167,14 @@ func (bot *Bot) handleText(c tele.Context) error {
 			}
 		case "reasoning_message":
 			if reasoning, ok := m["reasoning"].(string); ok {
-				responseText = fmt.Sprintf("<i>%s</i>", reasoning)
+				responseText = fmt.Sprintf("* %s", reasoning)
 			}
 		default:
 			responseText = fmt.Sprintf("Received message: %v", m)
 		}
 
 		if responseText != "" {
-			if err := c.Send(responseText, tele.ModeHTML); err != nil {
+			if err := c.Send(responseText); err != nil {
 				bot.LogError(err, c)
 				return err
 			}
