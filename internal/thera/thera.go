@@ -151,7 +151,7 @@ func (th *Thera) getChatForUser(ctx context.Context, userID int64) (*Chat, error
 	return th.CreateChat(ctx, userID, "", "")
 }
 
-func (th *Thera) SendMessage(ctx context.Context, userID int64, messageText string) ([]map[string]any, error) {
+func (th *Thera) SendMessage(ctx context.Context, userID int64, messageText string) ([]letta.Message, error) {
 	chat, err := th.getChatForUser(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get chat for user: %w", err)

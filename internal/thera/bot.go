@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"thera/internal/letta"
 	"time"
 
 	"go.uber.org/zap"
@@ -125,7 +126,7 @@ func (bot *Bot) LogError(err error, c tele.Context) {
 	}
 }
 
-func (bot *Bot) sendMessage(c tele.Context) ([]map[string]any, error) {
+func (bot *Bot) sendMessage(c tele.Context) ([]letta.Message, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -162,17 +163,23 @@ func (bot *Bot) handleText(c tele.Context) error {
 	for _, msg := range messages {
 		responseText := ""
 
-		switch m := msg; m["message_type"] {
-		case "assistant_message":
-			if content, ok := m["content"].(string); ok {
-				responseText = content
-			}
-		case "reasoning_message":
-			if reasoning, ok := m["reasoning"].(string); ok {
-				responseText = fmt.Sprintf("* %s", reasoning)
+		switch msg.GetMessageType() {
+		case letta.MessageTypeAssistant:
+			responseText = msg.GetContent()
+		case letta.MessageTypeReasoning:
+			responseText = fmt.Sprintf("* %s", msg.GetContent())
+		case letta.MessageTypeHiddenReasoning:
+			responseText = fmt.Sprintf("… %s", msg.GetContent())
+		case letta.MessageTypeToolCall:
+			responseText = fmt.Sprintf("→ %s", msg.GetContent())
+		case letta.MessageTypeToolReturn:
+			responseText = msg.GetContent()
+			if responseText != "" {
+				responseText = fmt.Sprintf("← %s", responseText)
 			}
 		default:
-			responseText = fmt.Sprintf("Received message: %v", m)
+			bot.log.Warn("received message: ", msg)
+			responseText = fmt.Sprintf("? %s:\n%s", msg.GetMessageType(), msg.GetContent())
 		}
 
 		if responseText != "" {
