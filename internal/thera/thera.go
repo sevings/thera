@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"thera/internal/letta"
 
 	"go.uber.org/zap"
@@ -46,8 +47,7 @@ func (th *Thera) Start() error {
 	return nil
 }
 
-// getChatForUser retrieves an existing chat for a user or creates a new one
-func (th *Thera) getChatForUser(ctx context.Context, userID int64) (*Chat, error) {
+func (th *Thera) CreateChat(ctx context.Context, userID int64, userName, userBio string) (*Chat, error) {
 	chat, err := th.db.GetChatByUserID(userID)
 	if err == nil {
 		return chat, nil
@@ -57,11 +57,15 @@ func (th *Thera) getChatForUser(ctx context.Context, userID int64) (*Chat, error
 		return nil, fmt.Errorf("error checking existing chat: %w", err)
 	}
 
-	// Create user identity
 	identityReq := letta.CreateIdentityRequest{
 		IdentifierKey: fmt.Sprintf("user_%d", userID),
-		Name:          fmt.Sprintf("User %d", userID),
 		IdentityType:  letta.IdentityTypeUser,
+	}
+
+	if userName == "" {
+		identityReq.Name = fmt.Sprintf("User %d", userID)
+	} else {
+		identityReq.Name = fmt.Sprintf("%s (%d)", userName, userID)
 	}
 
 	identity, err := th.api.CreateIdentity(ctx, identityReq)
@@ -87,13 +91,47 @@ func (th *Thera) getChatForUser(ctx context.Context, userID int64) (*Chat, error
 	agentConfig.Name = fmt.Sprintf("Agent for User %d", userID)
 	agentConfig.IdentityIDs = []string{identity.ID}
 
-	// Create agent
+	// Add human details to memory blocks if provided
+	if userName != "" || userBio != "" {
+		var details []string
+		if userName != "" {
+			details = append(details, fmt.Sprintf("Name: %s", userName))
+		}
+		if userBio != "" {
+			details = append(details, fmt.Sprintf("Bio: %s", userBio))
+		}
+
+		humanBlockValue := strings.Join(details, "\n")
+
+		humanBlockFound := false
+		for i := range agentConfig.MemoryBlocks {
+			if agentConfig.MemoryBlocks[i].Label == "human" {
+				agentConfig.MemoryBlocks[i].Value += "\n" + humanBlockValue
+				humanBlockFound = true
+				break
+			}
+		}
+
+		if !humanBlockFound {
+			humanBlock := letta.MemoryBlock{
+				Label: "human",
+				Limit: 5000,
+				Value: humanBlockValue,
+			}
+
+			if agentConfig.MemoryBlocks == nil {
+				agentConfig.MemoryBlocks = make([]letta.MemoryBlock, 0)
+			}
+
+			agentConfig.MemoryBlocks = append(agentConfig.MemoryBlocks, humanBlock)
+		}
+	}
+
 	agent, err := th.api.CreateAgent(ctx, agentConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create agent: %w", err)
 	}
 
-	// Create chat in database
 	chat, err = th.db.CreateChat(userID, identity.ID, agent.ID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to save chat: %w", err)
@@ -102,9 +140,15 @@ func (th *Thera) getChatForUser(ctx context.Context, userID int64) (*Chat, error
 	th.log.Infow("Created new agent for user",
 		"userID", userID,
 		"agentID", agent.ID,
-		"identityID", identity.ID)
+		"identityID", identity.ID,
+		"userName", userName)
 
 	return chat, nil
+}
+
+// getChatForUser retrieves an existing chat for a user or creates a new one
+func (th *Thera) getChatForUser(ctx context.Context, userID int64) (*Chat, error) {
+	return th.CreateChat(ctx, userID, "", "")
 }
 
 func (th *Thera) SendMessage(ctx context.Context, userID int64, messageText string) ([]map[string]any, error) {

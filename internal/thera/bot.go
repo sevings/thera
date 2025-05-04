@@ -20,6 +20,7 @@ type Bot struct {
 }
 
 type BotAPI interface {
+	ChatByID(id int64) (*tele.Chat, error)
 	Send(to tele.Recipient, what any, opts ...any) (*tele.Message, error)
 	Handle(endpoint any, h tele.HandlerFunc, m ...tele.MiddlewareFunc)
 	Use(middlewares ...tele.MiddlewareFunc)
@@ -49,6 +50,7 @@ func (bot *Bot) Start(cfg Config, api BotAPI, thera *Thera) {
 	bot.api.Use(bot.logMessage)
 
 	bot.api.Handle(tele.OnText, bot.handleText)
+	bot.api.Handle("/start", bot.handleStart)
 
 	go func() {
 		bot.log.Info("starting bot")
@@ -179,6 +181,22 @@ func (bot *Bot) handleText(c tele.Context) error {
 				return err
 			}
 		}
+	}
+
+	return nil
+}
+
+func (bot *Bot) handleStart(c tele.Context) error {
+	chat, err := bot.api.ChatByID(c.Chat().ID)
+	if err != nil {
+		return err
+	}
+
+	ctx := context.Background()
+	_, err = bot.thera.CreateChat(ctx, chat.ID, chat.FirstName, chat.Bio)
+	if err != nil {
+		bot.LogError(err, c)
+		return c.Send("Sorry, I encountered an error starting new chat.")
 	}
 
 	return nil
