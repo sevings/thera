@@ -132,7 +132,18 @@ func (th *Thera) CreateChat(ctx context.Context, userID int64, userName, userBio
 		return nil, fmt.Errorf("failed to create agent: %w", err)
 	}
 
-	chat, err = th.db.CreateChat(userID, identity.ID, agent.ID)
+	chat = &Chat{
+		UserID:     userID,
+		IdentityID: identity.ID,
+		AgentID:    agent.ID,
+		TalkLevel:  TalkLevelAloud,
+	}
+
+	if !th.cfg.Release {
+		chat.TalkLevel = TalkLevelVerbose
+	}
+
+	chat, err = th.db.CreateChat(chat)
 	if err != nil {
 		return nil, fmt.Errorf("failed to save chat: %w", err)
 	}
@@ -177,5 +188,26 @@ func (th *Thera) SendMessage(ctx context.Context, userID int64, messageText stri
 		"agentID", chat.AgentID,
 		"messageLength", len(messageText))
 
-	return resp.Messages, nil
+	if chat.TalkLevel == TalkLevelVerbose {
+		return resp.Messages, nil
+	}
+
+	messages := make([]letta.Message, 0)
+	for _, m := range resp.Messages {
+		switch m.GetMessageType() {
+		case letta.MessageTypeAssistant:
+			messages = append(messages, m)
+		case letta.MessageTypeReasoning:
+			if chat.TalkLevel == TalkLevelThoughts {
+				messages = append(messages, m)
+			}
+		}
+	}
+
+	return messages, nil
+}
+
+// UpdateTalkLevel updates the talk level for a chat by user ID
+func (th *Thera) UpdateTalkLevel(userID int64, newTalkLevel TalkLevel) error {
+	return th.db.UpdateChatTalkLevel(userID, newTalkLevel)
 }

@@ -17,10 +17,19 @@ type DB struct {
 
 type Chat struct {
 	gorm.Model
-	UserID     int64  `gorm:"unique"`
-	IdentityID string `gorm:"unique"`
-	AgentID    string `gorm:"unique"`
+	UserID     int64     `gorm:"unique"`
+	IdentityID string    `gorm:"unique"`
+	AgentID    string    `gorm:"unique"`
+	TalkLevel  TalkLevel `gorm:"default:0"`
 }
+
+type TalkLevel uint8
+
+const (
+	TalkLevelAloud    TalkLevel = 0
+	TalkLevelThoughts TalkLevel = 1
+	TalkLevelVerbose  TalkLevel = 2
+)
 
 func LoadDatabase(path string) (*DB, bool) {
 	log := zap.L().Named("db").Sugar()
@@ -42,14 +51,8 @@ func LoadDatabase(path string) (*DB, bool) {
 	}, true
 }
 
-// CreateChat creates a new chat with the given user ID and agent ID
-func (d *DB) CreateChat(userID int64, identityID, agentID string) (*Chat, error) {
-	chat := &Chat{
-		UserID:     userID,
-		IdentityID: identityID,
-		AgentID:    agentID,
-	}
-
+// CreateChat creates a new chat
+func (d *DB) CreateChat(chat *Chat) (*Chat, error) {
 	result := d.db.Create(chat)
 	if result.Error != nil {
 		d.log.Errorf("Failed to create chat: %v", result.Error)
@@ -73,4 +76,21 @@ func (d *DB) GetChatByUserID(userID int64) (*Chat, error) {
 	}
 
 	return &chat, nil
+}
+
+// UpdateChatTalkLevel updates the talk level for a chat by user ID
+func (d *DB) UpdateChatTalkLevel(userID int64, newTalkLevel TalkLevel) error {
+	result := d.db.Model(&Chat{}).Where("user_id = ?", userID).Update("talk_level", newTalkLevel)
+
+	if result.Error != nil {
+		d.log.Errorf("Failed to update talk level for user %d: %v", userID, result.Error)
+		return result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		d.log.Errorf("No chat found for user ID %d", userID)
+		return ErrNotFound
+	}
+
+	return nil
 }

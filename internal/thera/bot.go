@@ -52,6 +52,9 @@ func (bot *Bot) Start(cfg Config, api BotAPI, thera *Thera) {
 
 	bot.api.Handle(tele.OnText, bot.handleText)
 	bot.api.Handle("/start", bot.handleStart)
+	bot.api.Handle("/aloud_only", bot.handleAloudOnly)
+	bot.api.Handle("/thoughts_on", bot.handleThoughtsOn)
+	bot.api.Handle("/verbose_on", bot.handleVerboseOn)
 
 	go func() {
 		bot.log.Info("starting bot")
@@ -207,4 +210,34 @@ func (bot *Bot) handleStart(c tele.Context) error {
 	}
 
 	return nil
+}
+
+func (bot *Bot) handleAloudOnly(c tele.Context) error {
+	err := bot.thera.UpdateTalkLevel(c.Sender().ID, TalkLevelAloud)
+	if err != nil {
+		bot.LogError(err, c)
+		return c.Send("Sorry, I couldn't update your chat settings.")
+	}
+
+	return c.Send("Chat mode set to aloud only. I'll only show primary responses.")
+}
+
+func (bot *Bot) handleThoughtsOn(c tele.Context) error {
+	err := bot.thera.UpdateTalkLevel(c.Sender().ID, TalkLevelThoughts)
+	if err != nil {
+		bot.LogError(err, c)
+		return c.Send("Sorry, I couldn't update your chat settings.")
+	}
+
+	return c.Send("Chat mode set to include thoughts. I'll show reasoning alongside responses.")
+}
+
+func (bot *Bot) handleVerboseOn(c tele.Context) error {
+	err := bot.thera.UpdateTalkLevel(c.Sender().ID, TalkLevelVerbose)
+	if err != nil {
+		bot.LogError(err, c)
+		return c.Send("Sorry, I couldn't update your chat settings.")
+	}
+
+	return c.Send("Chat mode set to verbose. I'll show all internal messages and reasoning.")
 }
