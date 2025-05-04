@@ -17,9 +17,9 @@ type DB struct {
 
 type Chat struct {
 	gorm.Model
-	UserID     int64  `gorm:"uniqueIndex:idx_user_agent"`
-	IdentityID string `gorm:"uniqueIndex:idx_user_agent"`
-	AgentID    string `gorm:"uniqueIndex:idx_user_agent"`
+	UserID     int64  `gorm:"unique"`
+	IdentityID string `gorm:"unique"`
+	AgentID    string `gorm:"unique"`
 }
 
 func LoadDatabase(path string) (*DB, bool) {
