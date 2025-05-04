@@ -70,6 +70,8 @@ type MemoryBlock struct {
 	Metadata    map[string]any `json:"metadata,omitempty"`
 	Name        string         `json:"name,omitempty"`
 	Value       string         `json:"value"`
+	CreatedByID string         `json:"created_by_id,omitempty"`
+	UpdatedByID string         `json:"last_updated_by_id,omitempty"`
 }
 
 type ResponseFormat struct {
@@ -261,4 +263,20 @@ func (c *APIClient) CountAgents(ctx context.Context) (int, error) {
 	}
 
 	return response, nil
+}
+
+// RetrieveAgentMemory retrieves the memory state of a specific agent
+func (c *APIClient) RetrieveAgentMemory(ctx context.Context, agentID string) (*AgentMemory, error) {
+	apiReq := APIRequest{
+		Method:   http.MethodGet,
+		Endpoint: fmt.Sprintf("/v1/agents/%s/core-memory", agentID),
+	}
+
+	var response AgentMemory
+	err := c.sendRequest(ctx, apiReq, &response)
+	if err != nil {
+		return nil, err
+	}
+
+	return &response, nil
 }

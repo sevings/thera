@@ -55,6 +55,8 @@ func (bot *Bot) Start(cfg Config, api BotAPI, thera *Thera) {
 	bot.api.Handle("/aloud_only", bot.handleAloudOnly)
 	bot.api.Handle("/thoughts_on", bot.handleThoughtsOn)
 	bot.api.Handle("/verbose_on", bot.handleVerboseOn)
+	bot.api.Handle("/human_facts", bot.handleHumanFacts)
+	bot.api.Handle("/persona_facts", bot.handlePersonaFacts)
 
 	go func() {
 		bot.log.Info("starting bot")
@@ -240,4 +242,48 @@ func (bot *Bot) handleVerboseOn(c tele.Context) error {
 	}
 
 	return c.Send("Chat mode set to verbose. I'll show all internal messages and reasoning.")
+}
+
+func (bot *Bot) handleHumanFacts(c tele.Context) error {
+	ctx := context.Background()
+
+	agentMemory, err := bot.thera.GetMemory(ctx, c.Sender().ID)
+	if err != nil {
+		bot.LogError(err, c)
+		return c.Send("Sorry, I couldn't retrieve my memory.")
+	}
+
+	humanBlock := findMemoryBlock(agentMemory.Blocks, "human")
+	if humanBlock == nil {
+		return c.Send("No human facts found.")
+	}
+
+	return c.Send(fmt.Sprintf("What I know about you:\n\n%s", humanBlock.Value))
+}
+
+func (bot *Bot) handlePersonaFacts(c tele.Context) error {
+	ctx := context.Background()
+
+	agentMemory, err := bot.thera.GetMemory(ctx, c.Sender().ID)
+	if err != nil {
+		bot.LogError(err, c)
+		return c.Send("Sorry, I couldn't retrieve my memory.")
+	}
+
+	personaBlock := findMemoryBlock(agentMemory.Blocks, "persona")
+	if personaBlock == nil {
+		return c.Send("No persona facts found.")
+	}
+
+	return c.Send(fmt.Sprintf("What I know about myself:\n\n%s", personaBlock.Value))
+}
+
+// Helper function to find a memory block by label
+func findMemoryBlock(blocks []letta.MemoryBlock, label string) *letta.MemoryBlock {
+	for _, block := range blocks {
+		if strings.EqualFold(block.Label, label) {
+			return &block
+		}
+	}
+	return nil
 }

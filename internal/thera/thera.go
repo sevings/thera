@@ -211,3 +211,23 @@ func (th *Thera) SendMessage(ctx context.Context, userID int64, messageText stri
 func (th *Thera) UpdateTalkLevel(userID int64, newTalkLevel TalkLevel) error {
 	return th.db.UpdateChatTalkLevel(userID, newTalkLevel)
 }
+
+// GetMemory retrieves the memory of an agent associated with a user
+func (th *Thera) GetMemory(ctx context.Context, userID int64) (*letta.AgentMemory, error) {
+	chat, err := th.getChatForUser(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get chat for user: %w", err)
+	}
+
+	agentMemory, err := th.api.RetrieveAgentMemory(ctx, chat.AgentID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve agent memory: %w", err)
+	}
+
+	th.log.Infow("Retrieved agent memory",
+		"userID", userID,
+		"agentID", chat.AgentID,
+		"memoryBlockCount", len(agentMemory.Blocks))
+
+	return agentMemory, nil
+}
