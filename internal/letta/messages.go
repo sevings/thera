@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"time"
 )
 
 type Role string
@@ -128,16 +127,16 @@ type Usage struct {
 
 // StepMessage represents a message within steps
 type StepMessage struct {
-	Role            Role       `json:"role,omitempty"`
-	CreatedByID     string     `json:"created_by_id,omitempty"`
-	LastUpdatedByID string     `json:"last_updated_by_id,omitempty"`
-	CreatedAt       *time.Time `json:"created_at,omitempty"`
-	UpdatedAt       *time.Time `json:"updated_at,omitempty"`
-	ID              string     `json:"id,omitempty"`
-	AgentID         string     `json:"agent_id,omitempty"`
-	Model           string     `json:"model,omitempty"`
-	Content         []any      `json:"content,omitempty"`
-	Name            string     `json:"name,omitempty"`
+	Role            Role      `json:"role,omitempty"`
+	CreatedByID     string    `json:"created_by_id,omitempty"`
+	LastUpdatedByID string    `json:"last_updated_by_id,omitempty"`
+	CreatedAt       *FlexTime `json:"created_at,omitempty"`
+	UpdatedAt       *FlexTime `json:"updated_at,omitempty"`
+	ID              string    `json:"id,omitempty"`
+	AgentID         string    `json:"agent_id,omitempty"`
+	Model           string    `json:"model,omitempty"`
+	Content         []any     `json:"content,omitempty"`
+	Name            string    `json:"name,omitempty"`
 	ToolCalls       []struct {
 		ID       string `json:"id"`
 		Function struct {
@@ -175,7 +174,7 @@ type Message interface {
 // Base Message Struct
 type BaseMessage struct {
 	ID          string      `json:"id"`
-	Date        time.Time   `json:"date"`
+	Date        FlexTime    `json:"date"`
 	MessageType MessageType `json:"message_type"`
 	Name        *string     `json:"name,omitempty"`
 	OtID        *string     `json:"otid,omitempty"`
